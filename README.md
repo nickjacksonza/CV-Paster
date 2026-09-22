@@ -102,6 +102,14 @@ The CV goes through four steps, none of which leave the browser:
 4. `src/blocks.js` turns those blocks into the rows you see, and into the text
    that lands on the clipboard. `src/app.js` draws the page.
 
+## Publishing it
+
+The site is static, so publishing is a file copy. `deploy/upload.sh` sends it
+over SFTP from your machine, `.github/workflows/deploy.yml` does the same from
+GitHub, and `npm run zip` makes `dist/cv-paster-site.zip` for a hosting file
+manager. Connection details and the steps are in
+[`deploy/README.md`](deploy/README.md).
+
 ### Development
 
 ```bash

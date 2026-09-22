@@ -1,0 +1,48 @@
+name: Deploy to projects.slash301.com
+
+# Runs on a push to the deployment branch, or on demand from the Actions tab.
+# Set these repository secrets first (Settings > Secrets and variables > Actions):
+#   SFTP_HOST, SFTP_USER, SFTP_PASSWORD
+# and optionally the variable REMOTE_DIR to publish somewhere other than the
+# default folder below.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-slash301
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the tests
+        run: npm test
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Upload over SFTP
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+          SFTP_PORT: ${{ vars.SFTP_PORT || '22' }}
+          REMOTE_DIR: ${{ vars.REMOTE_DIR || '/public_html/projects.slash301.com/cv-paster' }}
+        run: |
+          lftp -c "
+            set sftp:auto-confirm yes;
+            set net:max-retries 2;
+            open -u '$SFTP_USER',\"\$SFTP_PASSWORD\" sftp://$SFTP_HOST:$SFTP_PORT;
+            mkdir -p '$REMOTE_DIR';
+            mirror --reverse --delete --verbose \
+              --include-glob index.html \
+              --include assets/ --include src/ --include vendor/ \
+              --exclude-glob .* \
+              . '$REMOTE_DIR';
+          "
