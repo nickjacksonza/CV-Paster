@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CV Paster</title>
+<meta name="description" content="Upload your CV, then copy it section by section into career portals. Dates come in every common format. Everything stays in your browser.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128203;</text></svg>">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="topbar__brand">
+    <span class="topbar__mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22"><use href="#icon-clipboard"></use></svg>
+    </span>
+    <div>
+      <p class="topbar__title">CV Paster</p>
+      <p class="topbar__tagline">Copy your CV one piece at a time</p>
+    </div>
+  </div>
+  <div class="topbar__actions">
+    <span class="badge badge--privacy" title="Your CV is read in this browser tab and is never uploaded to a server.">
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><use href="#icon-lock"></use></svg>
+      Stays in your browser
+    </span>
+    <button type="button" class="btn btn--ghost" id="theme-toggle" aria-label="Switch between light and dark">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><use href="#icon-theme"></use></svg>
+      <span id="theme-label">Theme</span>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <!-- Upload screen -->
+  <section class="landing" id="landing">
+    <div class="landing__intro">
+      <h1>Upload your CV once. Paste it anywhere.</h1>
+      <p class="lede">
+        Career portals ask for your CV again, field by field. CV Paster reads your CV and lays it out as
+        blocks you can copy one at a time: personal details, each role, each date, skills and qualifications.
+      </p>
+    </div>
+
+    <div class="landing__grid">
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-describedby="dropzone-help">
+        <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><use href="#icon-upload"></use></svg>
+        <p class="dropzone__title">Drop your CV here, or choose a file</p>
+        <p class="dropzone__hint" id="dropzone-help">PDF, Word (.docx) or plain text, up to about 10 MB</p>
+        <input type="file" id="file-input" accept=".pdf,.docx,.txt,.md,.rtf,application/pdf,text/plain" hidden>
+      </div>
+
+      <div class="panel">
+        <h2>Or paste the text</h2>
+        <p class="muted">Useful if your CV is in a format the reader cannot open, or if you keep it in a notes app.</p>
+        <label class="sr-only" for="paste-input">CV text</label>
+        <textarea id="paste-input" rows="7" placeholder="Paste the full text of your CV here"></textarea>
+        <div class="panel__actions">
+          <button type="button" class="btn btn--primary" id="paste-parse">Split this text into blocks</button>
+          <button type="button" class="btn btn--ghost" id="load-sample">Try the sample CV</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="status" id="landing-status" role="status" aria-live="polite"></p>
+
+    <ol class="steps">
+      <li><strong>1. Upload</strong><span>Your CV is read in this tab. Nothing is sent to a server.</span></li>
+      <li><strong>2. Check</strong><span>Every block can be edited if the reader misplaced something.</span></li>
+      <li><strong>3. Copy</strong><span>Copy any field, and pick the date format the portal wants.</span></li>
+    </ol>
+  </section>
+
+  <!-- Workspace -->
+  <section class="workspace" id="workspace" hidden>
+    <aside class="sidebar">
+      <div class="sidebar__file">
+        <p class="sidebar__filename" id="source-name">Sample CV</p>
+        <div class="sidebar__filemeta" id="source-meta"></div>
+        <button type="button" class="btn btn--ghost btn--block" id="new-upload">Use a different CV</button>
+      </div>
+
+      <div class="sidebar__search">
+        <label class="sr-only" for="search">Search blocks</label>
+        <div class="field-with-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><use href="#icon-search"></use></svg>
+          <input type="search" id="search" placeholder="Search (press /)" autocomplete="off">
+        </div>
+      </div>
+
+      <details class="sidebar__group" id="nav-group">
+        <summary class="sidebar__heading">Sections</summary>
+        <nav class="sidebar__nav" aria-label="CV sections">
+          <ul id="section-nav"></ul>
+        </nav>
+      </details>
+
+      <details class="sidebar__group" id="settings-group">
+        <summary class="sidebar__heading">Copy settings</summary>
+        <div class="sidebar__settings">
+        <label for="date-format">Preferred date format</label>
+        <select id="date-format"></select>
+
+        <label for="day-assumption">When the CV has no day</label>
+        <select id="day-assumption">
+          <option value="smart">Start dates use the 1st, end dates use the last day</option>
+          <option value="first">Always use the 1st of the month</option>
+        </select>
+
+        <label for="list-style">Job descriptions</label>
+        <select id="list-style"></select>
+
+        <label for="skill-style">Skill lists</label>
+        <select id="skill-style"></select>
+
+        <button type="button" class="btn btn--ghost btn--block" id="clear-marks">Clear the copied ticks</button>
+        <button type="button" class="btn btn--ghost btn--block btn--danger" id="clear-all">Delete this CV from the browser</button>
+        </div>
+      </details>
+    </aside>
+
+    <div class="content" id="content"></div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="icon-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="8" y="2" width="8" height="4" rx="1"></rect>
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+  </symbol>
+  <symbol id="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+  </symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 6 9 17l-5-5"></path>
+  </symbol>
+  <symbol id="icon-duplicate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="13" height="13" rx="2"></rect>
+    <path d="M8 21h11a2 2 0 0 0 2-2V8"></path>
+  </symbol>
+  <symbol id="icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 20h9"></path>
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+  </symbol>
+  <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"></path>
+  </symbol>
+  <symbol id="icon-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 7v6h6"></path><path d="M3.5 13a9 9 0 1 0 2.6-6.4L3 9"></path>
+  </symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+  </symbol>
+  <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 16V4m0 0L7 9m5-5 5 5"></path><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path>
+  </symbol>
+  <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+  </symbol>
+  <symbol id="icon-theme" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path>
+  </symbol>
+  <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M12 5v14M5 12h14"></path>
+  </symbol>
+</svg>
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
