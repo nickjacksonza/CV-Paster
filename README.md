@@ -2,6 +2,8 @@
 
 Upload your CV once, then copy it into career portals one piece at a time.
 
+Live site: https://projects.slash301.com/cv-paster/
+
 ## The problem it solves
 
 An ATS-ready CV still does not save you from the application form. Most career
