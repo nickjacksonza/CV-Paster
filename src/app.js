@@ -337,7 +337,7 @@ function renderCard(block) {
       <div class="card__title">
         <h3>${escapeHtml(blockTitle(block))}</h3>
         ${blockSubtitle(block) ? `<p class="card__sub">${escapeHtml(blockSubtitle(block))}</p>` : ''}
-        ${badges.length ? `<p class="card__sub">${badges.join(' ')}</p>` : ''}
+        ${badges.length ? `<div class="card__badges">${badges.join('')}</div>` : ''}
       </div>
       <div class="card__actions">
         <button type="button" class="btn btn--icon" data-action="duplicate" data-block="${block.id}"
@@ -444,6 +444,23 @@ function showLanding() {
   el.workspace.hidden = true;
   el.landing.hidden = false;
   setStatus('');
+}
+
+/* Wipes the parsed CV, in memory, on screen and in local storage, so both the
+   "start over" and "delete" actions leave nothing stale behind. */
+function resetState() {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch (error) { /* ignore */ }
+  Object.assign(state, {
+    source: null, sections: [], blocks: [], rowStyles: {}, expanded: {}, copied: [], search: '',
+    settings: { ...defaultSettings },
+  });
+  el.content.innerHTML = '';
+  el.sectionNav.innerHTML = '';
+  el.pasteInput.value = '';
+  el.fileInput.value = '';
+  el.search.value = '';
 }
 
 /* ---------- actions ---------- */
@@ -616,9 +633,13 @@ async function handleFile(file) {
 
 /* ---------- theme ---------- */
 
+function systemPrefersDark() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  el.themeLabel.textContent = theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Theme';
+  el.themeLabel.textContent = theme === 'dark' ? 'Dark' : 'Light';
   try {
     window.localStorage.setItem(THEME_KEY, theme);
   } catch (error) { /* ignore */ }
@@ -671,7 +692,10 @@ function bindEvents() {
   });
 
   el.newUpload.addEventListener('click', () => {
+    if (!window.confirm('Clear the current CV and start over with a new one?')) return;
+    resetState();
     showLanding();
+    showToast('Ready for a new CV');
   });
 
   el.clearMarks.addEventListener('click', () => {
@@ -683,15 +707,7 @@ function bindEvents() {
 
   el.clearAll.addEventListener('click', () => {
     if (!window.confirm('Delete the parsed CV from this browser?')) return;
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch (error) { /* ignore */ }
-    Object.assign(state, {
-      source: null, sections: [], blocks: [], rowStyles: {}, expanded: {}, copied: [], search: '',
-      settings: { ...defaultSettings },
-    });
-    el.pasteInput.value = '';
-    el.fileInput.value = '';
+    resetState();
     showLanding();
     showToast('Deleted from this browser');
   });
@@ -745,8 +761,7 @@ function bindEvents() {
   });
 
   el.themeToggle.addEventListener('click', () => {
-    const current = document.documentElement.dataset.theme;
-    const next = current === 'dark' ? 'light' : current === 'light' ? 'auto' : 'dark';
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     applyTheme(next);
   });
 
@@ -761,11 +776,11 @@ function bindEvents() {
 /* ---------- start ---------- */
 
 function start() {
-  let theme = 'auto';
+  let theme = null;
   try {
-    theme = window.localStorage.getItem(THEME_KEY) || 'auto';
+    theme = window.localStorage.getItem(THEME_KEY);
   } catch (error) { /* ignore */ }
-  applyTheme(theme);
+  applyTheme(theme === 'dark' || theme === 'light' ? theme : (systemPrefersDark() ? 'dark' : 'light'));
   bindEvents();
   window.addEventListener('resize', setSidebarGroups);
   if (load()) showWorkspace();
