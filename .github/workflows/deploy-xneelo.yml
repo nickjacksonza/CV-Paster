@@ -1,0 +1,49 @@
+name: Deploy to Xneelo (SFTP)
+
+# PRs: dry-run only (uploads nothing). Push to main / manual run: upload changed files. Never deletes remote files.
+on:
+  pull_request:
+    paths-ignore: ['**.md']
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-xneelo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ vars.XNEELO_HOST }}
+      USER_: ${{ vars.XNEELO_USER }}
+      DIR: ${{ vars.XNEELO_DIR }}
+      DRY: ${{ github.event_name == 'pull_request' && '--dry-run' || '' }}
+      PASS: ${{ secrets.XNEELO_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install lftp and pin host key
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+          [ -n "$PASS" ] || { echo "::error::XNEELO_PASSWORD secret is not set for this repo"; exit 1; }
+          mkdir -p ~/.ssh && printf '%s\n' '${{ vars.XNEELO_HOSTKEY }}' > ~/.ssh/known_hosts
+
+      - name: Stage publishable files (no dotfiles, docs, secrets; honours .deployignore)
+        run: |
+          EX=""; [ -f .deployignore ] && EX="--exclude-from=.deployignore"
+          rsync -a $EX --exclude='.*' --exclude='_backup-*' --exclude='*.md' --exclude='LICENSE' \
+            --exclude='*.pem' --exclude='*.key' --exclude='node_modules' --exclude='package*.json' ./ "$RUNNER_TEMP/site/"
+          echo "Staged files:"; (cd "$RUNNER_TEMP/site" && find . -type f | sort)
+          ! find "$RUNNER_TEMP/site" -name '.*' | grep -q . || { echo "::error::dotfile leaked into staging"; exit 1; }
+
+      - name: Upload to ${{ vars.XNEELO_DIR }} (no deletes)
+        run: |
+          cd "$RUNNER_TEMP/site"
+          lftp -u "$USER_","$PASS" -e "set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=yes'; set net:max-retries 2; mirror -R --verbose $DRY . '$DIR'; bye" "sftp://$HOST"
